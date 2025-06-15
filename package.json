@@ -5,7 +5,8 @@
   "description": "Simple chat",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "AEZG",
@@ -13,5 +14,9 @@
   "dependencies": {
     "express": "^5.1.0",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "@eslint/js": "^8.56.0"
   }
 }
