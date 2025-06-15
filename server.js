@@ -10,7 +10,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const logPath = process.env.LOG_PATH || "chat.log";
+const logPath = process.env.LOG_PATH || "logs/chat-%DATE%.log";
+
 const logger = createLogger({
   level: "info",
   format: format.combine(
@@ -20,6 +21,7 @@ const logger = createLogger({
   transports: [
     new DailyRotateFile({
       filename: logPath,
+      datePattern: "YYYY-MM-DD",
       maxSize: "20m",
       maxFiles: "14d",
     }),
