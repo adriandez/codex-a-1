@@ -1,6 +1,6 @@
 # Codex A 1
 
-A lightweight chat application built with Node.js, Express and Socket.IO. The server broadcasts real-time messages between all connected clients and logs each message with a timestamp and the sender's IP address to `chat.log`. The front‑end is served from the `public` directory and provides a simple browser interface for chatting.
+A lightweight chat application built with Node.js, Express and Socket.IO. The server broadcasts real-time messages between all connected clients and logs each message with a timestamp and the sender's IP address. Log files are stored in the `logs/` directory using date-based filenames (e.g. `logs/chat-2025-06-15.log`), which can be customised with the `LOG_PATH` environment variable. The front‑end is served from the `public` directory and provides a simple browser interface for chatting.
 
 ## Installation
 
