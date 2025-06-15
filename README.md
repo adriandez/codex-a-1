@@ -13,6 +13,13 @@ A lightweight chat application built with Node.js, Express and Socket.IO. The se
    [`emoji-picker-element`](https://github.com/nolanlawson/emoji-picker-element)
    library, so no additional packages are required.
 
+## Running tests
+
+Execute the test suite with:
+```bash
+npm test
+```
+
 ## Running the server
 
 Start the server with:
