@@ -9,6 +9,9 @@ A lightweight chat application built with Node.js, Express and Socket.IO. The se
    ```bash
    npm install
    ```
+   The emoji picker is loaded from a CDN using the
+   [`emoji-picker-element`](https://github.com/nolanlawson/emoji-picker-element)
+   library, so no additional packages are required.
 
 ## Running the server
 
