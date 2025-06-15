@@ -74,6 +74,7 @@
       bottom: 3.2em;
       right: 0.5em;
       display: none;
+      z-index: 100;
     }
 
     #send:hover {
@@ -97,8 +98,10 @@
   </form>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1"></script>
-  <script>
+  <script type="module">
+    // ✅ Se usa unpkg en vez de jsDelivr
+    import 'https://unpkg.com/emoji-picker-element@1';
+
     const nickname = prompt('Ingresa un apodo:') || 'Anon';
     const socket = io();
 
@@ -110,14 +113,25 @@
     const emojiBtn = document.getElementById('emoji-btn');
     const emojiPicker = document.getElementById('emoji-picker');
 
-    emojiBtn.addEventListener('click', () => {
-      emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
-    });
+    // Esperar que el componente esté definido
+    customElements.whenDefined('emoji-picker').then(() => {
+      emojiBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+      });
 
-    emojiPicker.addEventListener('emoji-click', event => {
-      input.value += event.detail.emoji.unicode;
-      emojiPicker.style.display = 'none';
-      input.focus();
+      emojiPicker.addEventListener('emoji-click', event => {
+        input.value += event.detail.emoji.unicode;
+        emojiPicker.style.display = 'none';
+        input.focus();
+      });
+
+      // Cerrar el selector al hacer clic fuera
+      document.addEventListener('click', (e) => {
+        if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+          emojiPicker.style.display = 'none';
+        }
+      });
     });
 
     function renderMessage(msg) {
@@ -125,11 +139,8 @@
       const [header, ...bodyLines] = msg.split('\n');
       const pre = document.createElement('pre');
 
-      // línea superior sin espacios
       const headerDiv = document.createElement('div');
       headerDiv.textContent = header.trim();
-
-      // cuerpo del mensaje con saltos
       pre.textContent = bodyLines.join('\n');
 
       li.appendChild(headerDiv);
