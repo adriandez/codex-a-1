@@ -1,1 +1,19 @@
 # Codex A 1
+
+A lightweight chat application built with Node.js, Express and Socket.IO. The server broadcasts real-time messages between all connected clients and logs each message with a timestamp and the sender's IP address to `chat.log`. The front‑end is served from the `public` directory and provides a simple browser interface for chatting.
+
+## Installation
+
+1. Ensure you have [Node.js](https://nodejs.org/) installed.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+## Running the server
+
+Start the server with:
+```bash
+npm start
+```
+The server listens on port `3000` by default. You can change the port by setting the `PORT` environment variable. Once running, open `http://localhost:3000` in your browser to join the chat.
