@@ -3,7 +3,6 @@ import http from "http";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
-import fs from "fs";
 import { appendFile } from "fs/promises";
 
 const app = express();
