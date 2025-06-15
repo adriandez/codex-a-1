@@ -73,7 +73,9 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    const nickname = prompt('Ingresa un apodo:');
     const socket = io();
+    socket.emit('set nickname', nickname);
     const form = document.getElementById('form');
     const input = document.getElementById('input');
     const messages = document.getElementById('messages');
