@@ -3,12 +3,16 @@ import http from "http";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
+import { randomUUID } from "crypto";
 import { createLogger, format, transports } from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
+const sessionId = randomUUID();
+const chatHistory = [];
 
 const logPath = process.env.LOG_PATH || "logs/chat-%DATE%.log";
 
@@ -38,9 +42,12 @@ io.on("connection", (socket) => {
 
   logger.info(`✅ Usuario conectado desde ${ip}`);
 
+  socket.emit("chat history", { sessionId, history: chatHistory });
+
   socket.on("chat message", (msg) => {
     const messageWithIp = `[${ip}] ${msg}`;
 
+    chatHistory.push(messageWithIp);
     io.emit("chat message", messageWithIp);
     logger.info(messageWithIp);
   });

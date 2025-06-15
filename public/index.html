@@ -77,6 +77,18 @@
     const form = document.getElementById('form');
     const input = document.getElementById('input');
     const messages = document.getElementById('messages');
+    let sessionId;
+
+    socket.on('chat history', function(data) {
+      sessionId = data.sessionId;
+      messages.innerHTML = '';
+      data.history.forEach(function(msg) {
+        const item = document.createElement('li');
+        item.textContent = msg;
+        messages.appendChild(item);
+      });
+      messages.scrollTop = messages.scrollHeight;
+    });
 
     form.addEventListener('submit', function(e) {
       e.preventDefault();
