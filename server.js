@@ -39,6 +39,11 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () =>
-  console.log(`🟢 Servidor en http://localhost:${PORT}`)
-);
+server.listen(PORT, (err) => {
+  if (err) {
+    console.error("❌ Error iniciando el servidor:", err);
+    process.exit(1);
+    return;
+  }
+  console.log(`🟢 Servidor en http://localhost:${PORT}`);
+});
