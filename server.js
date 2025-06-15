@@ -13,6 +13,7 @@ const io = new Server(server);
 
 const sessionId = randomUUID();
 const chatHistory = [];
+const nicknames = new Map();
 
 const logPath = process.env.LOG_PATH || "logs/chat-%DATE%.log";
 
@@ -42,18 +43,25 @@ io.on("connection", (socket) => {
 
   logger.info(`✅ Usuario conectado desde ${ip}`);
 
+  let nickname = "Anon";
+  socket.on("set nickname", (name) => {
+    nickname = name;
+    nicknames.set(socket.id, { ip, nickname });
+  });
+
   socket.emit("chat history", { sessionId, history: chatHistory });
 
   socket.on("chat message", (msg) => {
-    const messageWithIp = `[${ip}] ${msg}`;
+    const messageWithInfo = `[${ip}] [${nickname}] ${msg}`;
 
-    chatHistory.push(messageWithIp);
-    io.emit("chat message", messageWithIp);
-    logger.info(messageWithIp);
+    chatHistory.push(messageWithInfo);
+    io.emit("chat message", messageWithInfo);
+    logger.info(messageWithInfo);
   });
 
   socket.on("disconnect", () => {
     logger.info(`❌ Usuario desconectado desde ${ip}`);
+    nicknames.delete(socket.id);
   });
 });
 
