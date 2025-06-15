@@ -45,15 +45,24 @@ io.on("connection", (socket) => {
   logger.info(`✅ Usuario conectado desde ${ip}`);
 
   let nickname = "Anon";
+
   socket.on("set nickname", (name) => {
-    nickname = name;
+    nickname = name?.trim() || "Anon";
     nicknames.set(socket.id, { ip, nickname });
   });
 
   socket.emit("chat history", { sessionId, history: chatHistory });
 
   socket.on("chat message", (msg) => {
-    const messageWithInfo = formatMessage(ip, nickname, msg);
+    const cleanMsg =
+      typeof msg === "string"
+        ? msg
+            .replace(/\r\n/g, "\n")
+            .replace(/\u00A0/g, " ")
+            .replace(/\u200B/g, "")
+        : String(msg);
+
+    const messageWithInfo = formatMessage(ip, nickname, cleanMsg);
 
     chatHistory.push(messageWithInfo);
     io.emit("chat message", messageWithInfo);
