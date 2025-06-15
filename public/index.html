@@ -53,7 +53,8 @@
       font-family: monospace;
     }
 
-    #emoji-btn {
+    #emoji-btn,
+    #image-btn {
       background: none;
       border: none;
       font-size: 1.5em;
@@ -84,7 +85,19 @@
     pre {
       margin: 0;
       font-family: monospace;
-      white-space: pre;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    img.chat-image {
+      max-width: 300px;
+      max-height: 300px;
+      display: block;
+      margin-top: 0.5em;
+    }
+
+    #image-upload {
+      display: none;
     }
   </style>
 </head>
@@ -92,6 +105,8 @@
   <ul id="messages"></ul>
   <form id="form">
     <textarea id="input" autocomplete="off" placeholder="Escribe tu mensaje..."></textarea>
+    <input type="file" id="image-upload" accept="image/*" />
+    <button type="button" id="image-btn">📷</button>
     <button type="button" id="emoji-btn">😊</button>
     <button id="send">Enviar</button>
     <emoji-picker id="emoji-picker"></emoji-picker>
@@ -99,7 +114,6 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script type="module">
-    // ✅ Se usa unpkg en vez de jsDelivr
     import 'https://unpkg.com/emoji-picker-element@1';
 
     const nickname = prompt('Ingresa un apodo:') || 'Anon';
@@ -112,8 +126,10 @@
     const messages = document.getElementById('messages');
     const emojiBtn = document.getElementById('emoji-btn');
     const emojiPicker = document.getElementById('emoji-picker');
+    const imageBtn = document.getElementById('image-btn');
+    const imageInput = document.getElementById('image-upload');
 
-    // Esperar que el componente esté definido
+    // Mostrar selector de emoji
     customElements.whenDefined('emoji-picker').then(() => {
       emojiBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -126,12 +142,33 @@
         input.focus();
       });
 
-      // Cerrar el selector al hacer clic fuera
       document.addEventListener('click', (e) => {
         if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
           emojiPicker.style.display = 'none';
         }
       });
+    });
+
+    // Botón imagen
+    imageBtn.addEventListener('click', () => {
+      imageInput.click();
+    });
+
+    imageInput.addEventListener('change', async () => {
+      const file = imageInput.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await fetch('/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const { imageUrl } = await res.json();
+      socket.emit('chat message', imageUrl);
+      imageInput.value = ''; // limpiar selección
     });
 
     function renderMessage(msg) {
@@ -141,7 +178,18 @@
 
       const headerDiv = document.createElement('div');
       headerDiv.textContent = header.trim();
-      pre.textContent = bodyLines.join('\n');
+
+      const bodyText = bodyLines.join('\n')
+        .replace(
+          /(https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|webp))/gi,
+          '<img src="$1" class="chat-image" />'
+        )
+        .replace(
+          /(\/uploads\/[^\s]+?\.(?:png|jpe?g|gif|webp))/gi,
+          '<img src="$1" class="chat-image" />'
+        );
+
+      pre.innerHTML = bodyText;
 
       li.appendChild(headerDiv);
       li.appendChild(pre);
