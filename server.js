@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { randomUUID } from "crypto";
 import { createLogger, format, transports } from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
+import { formatMessage } from "./utils.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -52,7 +53,7 @@ io.on("connection", (socket) => {
   socket.emit("chat history", { sessionId, history: chatHistory });
 
   socket.on("chat message", (msg) => {
-    const messageWithInfo = `[${ip}] [${nickname}] ${msg}`;
+    const messageWithInfo = formatMessage(ip, nickname, msg);
 
     chatHistory.push(messageWithInfo);
     io.emit("chat message", messageWithInfo);
@@ -65,12 +66,17 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, (err) => {
-  if (err) {
-    logger.error("❌ Error iniciando el servidor:", err);
-    process.exit(1);
-    return;
-  }
-  logger.info(`🟢 Servidor en http://localhost:${PORT}`);
-});
+export function startServer(port = process.env.PORT || 3000) {
+  server.listen(port, (err) => {
+    if (err) {
+      logger.error("❌ Error iniciando el servidor:", err);
+      process.exit(1);
+      return;
+    }
+    logger.info(`🟢 Servidor en http://localhost:${port}`);
+  });
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  startServer();
+}

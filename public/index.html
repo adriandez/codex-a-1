@@ -35,6 +35,7 @@
     }
 
     #form {
+      position: relative;
       display: flex;
       padding: 0.5em;
       gap: 0.5em;
@@ -50,6 +51,13 @@
       border-radius: 4px;
     }
 
+    #emoji-btn {
+      background: none;
+      border: none;
+      font-size: 1.5em;
+      cursor: pointer;
+    }
+
     #send {
       padding: 0.8em 1.2em;
       font-size: 1em;
@@ -57,6 +65,13 @@
       color: white;
       border: none;
       border-radius: 4px;
+    }
+
+    #emoji-picker {
+      position: absolute;
+      bottom: 3.2em;
+      right: 0.5em;
+      display: none;
     }
 
     #send:hover {
@@ -68,10 +83,13 @@
   <ul id="messages"></ul>
   <form id="form">
     <input id="input" autocomplete="off" placeholder="Escribe tu mensaje..." />
+    <button type="button" id="emoji-btn">😊</button>
     <button id="send">Enviar</button>
+    <emoji-picker id="emoji-picker"></emoji-picker>
   </form>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1"></script>
   <script>
     const nickname = prompt('Ingresa un apodo:');
     const socket = io();
@@ -79,6 +97,16 @@
     const form = document.getElementById('form');
     const input = document.getElementById('input');
     const messages = document.getElementById('messages');
+    const emojiBtn = document.getElementById('emoji-btn');
+    const emojiPicker = document.getElementById('emoji-picker');
+    emojiBtn.addEventListener('click', () => {
+      emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+    });
+    emojiPicker.addEventListener('emoji-click', event => {
+      input.value += event.detail.emoji.unicode;
+      emojiPicker.style.display = 'none';
+      input.focus();
+    });
     let sessionId;
 
     socket.on('chat history', function(data) {
