@@ -89,7 +89,7 @@
       word-break: break-word;
     }
 
-    img.chat-image {
+    img.chat-image, video.chat-video {
       max-width: 300px;
       max-height: 300px;
       display: block;
@@ -99,149 +99,223 @@
     #image-upload {
       display: none;
     }
+
+    #upload-progress-container {
+      width: 100%;
+      height: 5px;
+      background: #ddd;
+      display: none;
+    }
+
+    #upload-progress {
+      height: 100%;
+      width: 0%;
+      background: #007bff;
+      transition: width 0.2s;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 1.5em;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 0.75em 1.5em;
+      border-radius: 4px;
+      font-size: 0.95em;
+      z-index: 9999;
+      display: none;
+      opacity: 0.9;
+      animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    }
+
+    @keyframes fadein {
+      from { opacity: 0; bottom: 0.5em; }
+      to   { opacity: 0.9; bottom: 1.5em; }
+    }
+
+    @keyframes fadeout {
+      from { opacity: 0.9; }
+      to   { opacity: 0; }
+    }
   </style>
 </head>
 <body>
   <ul id="messages"></ul>
   <form id="form">
     <textarea id="input" autocomplete="off" placeholder="Escribe tu mensaje..."></textarea>
-    <input type="file" id="image-upload" accept="image/*" />
+    <input type="file" id="image-upload" accept="image/*,video/mp4,video/webm" />
     <button type="button" id="image-btn">📷</button>
     <button type="button" id="emoji-btn">😊</button>
     <button id="send">Enviar</button>
     <emoji-picker id="emoji-picker"></emoji-picker>
   </form>
+  <div id="upload-progress-container">
+    <div id="upload-progress"></div>
+  </div>
+  <div id="toast"></div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script type="module">
-    import 'https://unpkg.com/emoji-picker-element@1';
+<script src="/socket.io/socket.io.js"></script>
+<script type="module">
+  import 'https://unpkg.com/emoji-picker-element@1';
 
-    const nickname = prompt('Ingresa un apodo:') || 'Anon';
-    const socket = io();
+  const nickname = prompt('Ingresa un apodo:') || 'Anon';
+  const socket = io();
 
-    socket.emit('set nickname', nickname);
+  socket.emit('set nickname', nickname);
 
-    const form = document.getElementById('form');
-    const input = document.getElementById('input');
-    const messages = document.getElementById('messages');
-    const emojiBtn = document.getElementById('emoji-btn');
-    const emojiPicker = document.getElementById('emoji-picker');
-    const imageBtn = document.getElementById('image-btn');
-    const imageInput = document.getElementById('image-upload');
+  const form = document.getElementById('form');
+  const input = document.getElementById('input');
+  const messages = document.getElementById('messages');
+  const emojiBtn = document.getElementById('emoji-btn');
+  const emojiPicker = document.getElementById('emoji-picker');
+  const imageBtn = document.getElementById('image-btn');
+  const imageInput = document.getElementById('image-upload');
+  const progressBar = document.getElementById('upload-progress');
+  const progressContainer = document.getElementById('upload-progress-container');
+  const toast = document.getElementById('toast');
 
-    // Mostrar selector de emoji
-    customElements.whenDefined('emoji-picker').then(() => {
-      emojiBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
-      });
+  function showToast(message) {
+    toast.textContent = message;
+    toast.style.display = 'block';
+    clearTimeout(toast._hideTimeout);
+    toast._hideTimeout = setTimeout(() => {
+      toast.style.display = 'none';
+    }, 3000);
+  }
 
-      emojiPicker.addEventListener('emoji-click', event => {
-        input.value += event.detail.emoji.unicode;
-        emojiPicker.style.display = 'none';
-        input.focus();
-      });
+  emojiBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+  });
 
-      document.addEventListener('click', (e) => {
-        if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
-          emojiPicker.style.display = 'none';
-        }
-      });
-    });
+  emojiPicker.addEventListener('emoji-click', event => {
+    input.value += event.detail.emoji.unicode;
+    emojiPicker.style.display = 'none';
+    input.focus();
+  });
 
-    // Botón imagen
-    imageBtn.addEventListener('click', () => {
-      imageInput.click();
-    });
-
-    imageInput.addEventListener('change', async () => {
-      const file = imageInput.files[0];
-      if (!file) return;
-
-      const formData = new FormData();
-      formData.append('image', file);
-
-      const res = await fetch('/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      const { imageUrl } = await res.json();
-      socket.emit('chat message', imageUrl);
-      imageInput.value = '';
-    });
-
-    // 📋 Soporte para pegar imagen directamente (Ctrl+V)
-    input.addEventListener('paste', async (event) => {
-      const items = event.clipboardData?.items;
-      if (!items) return;
-
-      for (const item of items) {
-        if (item.type.startsWith('image/')) {
-          const file = item.getAsFile();
-          if (!file) continue;
-
-          const formData = new FormData();
-          formData.append('image', file);
-
-          const res = await fetch('/upload', {
-            method: 'POST',
-            body: formData
-          });
-
-          const { imageUrl } = await res.json();
-          socket.emit('chat message', imageUrl);
-        }
-      }
-    });
-
-    function renderMessage(msg) {
-      const li = document.createElement('li');
-      const [header, ...bodyLines] = msg.split('\n');
-      const pre = document.createElement('pre');
-
-      const headerDiv = document.createElement('div');
-      headerDiv.textContent = header.trim();
-
-      const bodyText = bodyLines.join('\n')
-        .replace(
-          /(https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|webp))/gi,
-          '<img src="$1" class="chat-image" />'
-        )
-        .replace(
-          /(\/uploads\/[^\s]+?\.(?:png|jpe?g|gif|webp))/gi,
-          '<img src="$1" class="chat-image" />'
-        );
-
-      pre.innerHTML = bodyText;
-
-      li.appendChild(headerDiv);
-      li.appendChild(pre);
-      messages.appendChild(li);
-      messages.scrollTop = messages.scrollHeight;
+  document.addEventListener('click', (e) => {
+    if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+      emojiPicker.style.display = 'none';
     }
+  });
 
-    socket.on('chat history', function(data) {
-      messages.innerHTML = '';
-      data.history.forEach(renderMessage);
-    });
+  imageBtn.addEventListener('click', () => {
+    imageInput.click();
+  });
 
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
-      const message = input.value
-        .replace(/\r\n/g, '\n')
-        .replace(/\t/g, '    ')
-        .replace(/\u00A0/g, ' ')
-        .replace(/\u200B/g, '')
-        .trimEnd();
+  imageInput.addEventListener('change', () => handleUpload(imageInput.files[0]));
 
-      if (message) {
-        socket.emit('chat message', message);
-        input.value = '';
+  input.addEventListener('paste', (event) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) handleUpload(file);
       }
-    });
+    }
+  });
 
-    socket.on('chat message', renderMessage);
-  </script>
+  function handleUpload(file) {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/upload');
+    xhr.setRequestHeader('x-socket-id', socket.id);
+
+    progressBar.style.width = '0%';
+    progressContainer.style.display = 'block';
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        progressBar.style.width = percent + '%';
+      }
+    };
+
+    xhr.onload = () => {
+      progressContainer.style.display = 'none';
+      if (xhr.status === 200) {
+        const { imageUrl } = JSON.parse(xhr.responseText);
+        socket.emit('chat message', imageUrl);
+        showToast('✅ Archivo subido con éxito');
+      } else {
+        try {
+          const { error } = JSON.parse(xhr.responseText);
+          showToast(`⚠️ ${error}`);
+        } catch {
+          showToast('❌ Error inesperado al subir archivo.');
+        }
+      }
+    };
+
+    xhr.onerror = () => {
+      progressContainer.style.display = 'none';
+      showToast('❌ Error de conexión al subir archivo.');
+    };
+
+    xhr.send(formData);
+  }
+
+  function renderMessage(msg) {
+    const li = document.createElement('li');
+    const [header, ...bodyLines] = msg.split('\n');
+    const pre = document.createElement('pre');
+
+    const headerDiv = document.createElement('div');
+    headerDiv.textContent = header.trim();
+
+    const bodyText = bodyLines.join('\n')
+      .replace(/(https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|webp))/gi, '<img src="$1" class="chat-image" />')
+      .replace(/(\/uploads\/[^\s]+?\.(?:png|jpe?g|gif|webp))/gi, '<img src="$1" class="chat-image" />')
+      .replace(/(https?:\/\/[^\s]+?\.(?:mp4|webm))/gi, '<video class="chat-video" controls src="$1"></video>')
+      .replace(/(\/uploads\/[^\s]+?\.(?:mp4|webm))/gi, '<video class="chat-video" controls src="$1"></video>');
+
+    pre.innerHTML = bodyText;
+    li.appendChild(headerDiv);
+    li.appendChild(pre);
+    messages.appendChild(li);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  socket.on('chat history', function(data) {
+    messages.innerHTML = '';
+    data.history.forEach(renderMessage);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    sendMessage();
+  });
+
+  function sendMessage() {
+    const message = input.value
+      .replace(/\r\n/g, '\n')
+      .replace(/\t/g, '    ')
+      .replace(/\u00A0/g, ' ')
+      .replace(/\u200B/g, '')
+      .trimEnd();
+
+    if (message) {
+      socket.emit('chat message', message);
+      input.value = '';
+    }
+  }
+
+  socket.on('chat message', renderMessage);
+</script>
 </body>
 </html>

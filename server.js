@@ -48,7 +48,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
-// 🛡️ Limitador por IP para evitar flood general
 const uploadLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 20,
@@ -71,59 +70,62 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB para videos e imágenes
   fileFilter: (req, file, cb) => {
-    const isImage = /^image\/(jpeg|png|gif|webp)$/.test(file.mimetype);
-    if (!isImage) {
-      return cb(new Error("Solo se permiten imágenes JPEG, PNG, GIF o WebP"));
+    const isMedia =
+      /^image\/(jpeg|png|gif|webp)$/.test(file.mimetype) ||
+      /^video\/(mp4|webm)$/.test(file.mimetype);
+    if (!isMedia) {
+      return cb(
+        new Error(
+          "Solo se permiten imágenes JPEG, PNG, GIF, WebP o vídeos MP4/WebM"
+        )
+      );
     }
     cb(null, true);
   },
 });
 
-// 🔁 Reinicia contador de minuto cada 60 segundos
 setInterval(() => uploadCountersPerMinute.clear(), 60_000);
 
 app.post("/upload", uploadLimiter, upload.single("image"), async (req, res) => {
   const ip = req.ip;
   const socketId = req.headers["x-socket-id"];
 
-  if (!socketId) {
+  if (!socketId)
     return res.status(400).json({ error: "Falta header x-socket-id" });
-  }
 
-  // ⏱️ Limite por minuto (IP)
   const minuteCount = uploadCountersPerMinute.get(ip) || 0;
-  if (minuteCount >= 4) {
-    return res.status(429).json({ error: "Máximo 4 imágenes por minuto." });
-  }
+  if (minuteCount >= 4)
+    return res.status(429).json({ error: "Máximo 4 archivos por minuto." });
   uploadCountersPerMinute.set(ip, minuteCount + 1);
 
-  // 🧑‍💻 Límite por sesión (socket.id)
   const sessionCount = uploadCountersPerSession.get(socketId) || 0;
-  if (sessionCount >= 30) {
-    return res.status(429).json({ error: "Máximo 30 imágenes por sesión." });
-  }
+  if (sessionCount >= 30)
+    return res.status(429).json({ error: "Máximo 30 archivos por sesión." });
   uploadCountersPerSession.set(socketId, sessionCount + 1);
 
-  if (!req.file) {
+  if (!req.file)
     return res.status(400).json({ error: "No se subió ningún archivo" });
-  }
 
-  // 🧪 Verificación real del tipo de archivo
   const detected = await fileTypeFromFile(req.file.path);
   if (
     !detected ||
-    !["image/jpeg", "image/png", "image/gif", "image/webp"].includes(
-      detected.mime
-    )
+    ![
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "video/mp4",
+      "video/webm",
+    ].includes(detected.mime)
   ) {
     fs.unlinkSync(req.file.path);
     return res.status(400).json({ error: "Tipo de archivo no permitido" });
   }
 
   const imageUrl = `/uploads/${req.file.filename}`;
-  logger.info(`📸 Imagen subida: ${imageUrl}`);
+  logger.info(`📸 Archivo subido: ${imageUrl}`);
   res.json({ imageUrl });
 });
 
@@ -133,6 +135,7 @@ io.on("connection", (socket) => {
 
   logger.info(`✅ Usuario conectado desde ${ip}`);
   let nickname = "Anon";
+
   socket.on("set nickname", (name) => {
     nickname = name?.trim() || "Anon";
     nicknames.set(socket.id, { ip, nickname });
