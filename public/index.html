@@ -168,7 +168,31 @@
 
       const { imageUrl } = await res.json();
       socket.emit('chat message', imageUrl);
-      imageInput.value = ''; // limpiar selección
+      imageInput.value = '';
+    });
+
+    // 📋 Soporte para pegar imagen directamente (Ctrl+V)
+    input.addEventListener('paste', async (event) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (!file) continue;
+
+          const formData = new FormData();
+          formData.append('image', file);
+
+          const res = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          const { imageUrl } = await res.json();
+          socket.emit('chat message', imageUrl);
+        }
+      }
     });
 
     function renderMessage(msg) {

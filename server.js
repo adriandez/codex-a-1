@@ -59,7 +59,17 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const isImage = /^image\/(jpeg|png|gif|webp)$/.test(file.mimetype);
+    if (!isImage) {
+      return cb(new Error("Solo se permiten imágenes JPEG, PNG, GIF o WebP"));
+    }
+    cb(null, true);
+  },
+});
 
 app.post("/upload", upload.single("image"), (req, res) => {
   if (!req.file) {
